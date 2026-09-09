@@ -1,0 +1,6 @@
+id,name,category,unit_price,cost_price,is_active
+101,Enterprise Analytics Suite,Software,45000.00,12000.00,true
+102,Cloud Data Connector,Software,15000.00,4000.00,true
+103,IoT Gateway Hub,Hardware,25000.00,15000.00,true
+104,Edge AI Accelerator,Hardware,85000.00,50000.00,true
+105,API Gateway Pro,Software,18000.00,5000.00,true
