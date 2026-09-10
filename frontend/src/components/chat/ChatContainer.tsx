@@ -10,6 +10,8 @@ export interface ChatContainerProps {
   onSelectSuggestion: (query: string) => void;
   onClarificationSelect?: (option: ClarificationOption) => void;
   onExecuteSql?: (sql: string) => void;
+  /** v2: called when the user clicks an alternative interpretation chip. */
+  onRunAlternative?: (sql: string, tableName: string | undefined) => void;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -18,6 +20,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   onSelectSuggestion,
   onClarificationSelect,
   onExecuteSql,
+  onRunAlternative,
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +40,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           message={msg}
           onClarificationSelect={onClarificationSelect}
           onExecuteSql={onExecuteSql}
+          onRunAlternative={onRunAlternative}
         />
       ))}
 

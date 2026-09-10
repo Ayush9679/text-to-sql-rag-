@@ -203,3 +203,135 @@ export async function fetchAvailableDimensions(): Promise<AvailableDimension[]> 
 export async function fetchAnalyticsSchema(): Promise<DatabaseSchemaResponse> {
   return apiFetch<DatabaseSchemaResponse>('/api/analytics/schema');
 }
+
+// ── DataQuery AI ──────────────────────────────────────────────────
+
+export interface DataQueryChartSuggestion {
+  type: 'bar' | 'line' | 'pie' | 'table' | 'none';
+  x?: string | null;
+  y?: string | null;
+}
+
+
+export interface AlternativeQuery {
+  label: string;
+  sql: string;
+}
+
+export interface DataQueryRequest {
+  query: string;
+  /** Specific table to query — defaults to the tenant's first available table. */
+  table_name?: string;
+}
+
+export interface DataQueryResponse {
+  answer: string | null;
+  query_type: 'sql' | 'semantic_search' | 'hybrid' | null;
+  sql: string | null;
+  semantic_query: string | null;
+  data: Record<string, unknown>[];
+  columns: string[];
+  row_count_returned: number;
+  chart_suggestion: DataQueryChartSuggestion;
+  assumptions: string[];
+  needs_clarification: boolean;
+  clarification_question: string | null;
+  /** v2: pre-generated alternative SQL interpretations (no dead-ends). */
+  alternatives: AlternativeQuery[];
+  table_name: string | null;
+  error?: string | null;
+}
+
+export interface ExecuteAlternativeSqlResponse {
+  data: Record<string, unknown>[];
+  columns: string[];
+  row_count: number;
+  error?: string | null;
+}
+
+export async function submitDataQuery(
+  payload: DataQueryRequest,
+): Promise<DataQueryResponse> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 20_000);
+
+  try {
+    const csrfToken = getCsrfToken();
+    const response = await fetch(`${apiBaseUrl}/api/dataquery`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+      credentials: 'include',
+    });
+
+    const body: unknown = await response.json().catch(() => null);
+
+    if (!response.ok || !body || typeof body !== 'object') {
+      const errMsg =
+        body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string'
+          ? body.detail
+          : 'DataQuery request failed.';
+      throw new Error(errMsg);
+    }
+
+    return body as DataQueryResponse;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('DataQuery timed out. Please try again.');
+    }
+    if (error instanceof Error) throw error;
+    throw new Error('Unable to reach the DataQuery service.');
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+/**
+ * Execute a pre-generated alternate SQL statement — no LLM call.
+ * Used when the user clicks an alternative-interpretation chip.
+ */
+export async function executeAlternativeSql(
+  sql: string,
+  tableName: string,
+): Promise<ExecuteAlternativeSqlResponse> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const csrfToken = getCsrfToken();
+    const response = await fetch(`${apiBaseUrl}/api/dataquery/execute-sql`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify({ sql, table_name: tableName }),
+      signal: controller.signal,
+      credentials: 'include',
+    });
+
+    const body: unknown = await response.json().catch(() => null);
+
+    if (!response.ok || !body || typeof body !== 'object') {
+      const errMsg =
+        body && typeof body === 'object' && 'detail' in body && typeof body.detail === 'string'
+          ? body.detail
+          : 'Alternate SQL execution failed.';
+      throw new Error(errMsg);
+    }
+
+    return body as ExecuteAlternativeSqlResponse;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Alternate query timed out.');
+    }
+    if (error instanceof Error) throw error;
+    throw new Error('Unable to reach the execute-sql service.');
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}

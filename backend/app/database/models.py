@@ -18,9 +18,11 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+import os
+
 try:
     from pgvector.sqlalchemy import Vector
-    HAS_PGVECTOR = True
+    HAS_PGVECTOR = os.getenv("USE_PGVECTOR", "false").lower() in ("true", "1", "yes")
 except ImportError:
     HAS_PGVECTOR = False
     Vector = None  # type: ignore

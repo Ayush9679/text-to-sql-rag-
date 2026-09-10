@@ -44,6 +44,11 @@ export interface QueryResultData {
   totalRows: number;
 }
 
+export interface AlternativeQuery {
+  label: string;
+  sql: string;
+}
+
 export interface QueryMessage {
   id: string;
   sender: 'user' | 'assistant';
@@ -59,7 +64,12 @@ export interface QueryMessage {
   results?: QueryResultData;
   executionMeta?: QueryExecutionMeta;
   errorMessage?: string;
+  /** Pre-generated alternate SQL interpretations (v2 no-dead-end contract). */
+  alternatives?: AlternativeQuery[];
+  /** DataQuery AI v2: table name the query ran against (needed for execute-sql). */
+  dataQueryTableName?: string;
 }
+
 
 export interface QueryHistoryItem {
   id: string;

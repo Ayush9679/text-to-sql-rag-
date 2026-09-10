@@ -14,12 +14,15 @@ export interface ChatMessageProps {
   message: QueryMessage;
   onClarificationSelect?: (option: ClarificationOption) => void;
   onExecuteSql?: (sql: string) => void;
+  /** DataQuery AI v2: called when user clicks an alternative interpretation chip. */
+  onRunAlternative?: (sql: string, tableName: string) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onClarificationSelect,
   onExecuteSql,
+  onRunAlternative,
 }) => {
   const [showConfidenceDetails, setShowConfidenceDetails] = useState(false);
   const [activeView, setActiveView] = useState<'table' | 'sql' | 'summary'>('table');
@@ -93,6 +96,24 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           {message.naturalAnswer && (
             <div className="text-sm text-slate-200 leading-relaxed font-normal bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/80">
               {message.naturalAnswer}
+            </div>
+          )}
+
+          {/* DataQuery AI v2: Alternative interpretation chips */}
+          {message.alternatives && message.alternatives.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className="text-[11px] text-slate-500 self-center font-medium uppercase tracking-wider">Try instead:</span>
+              {message.alternatives.map((alt, i) => (
+                <button
+                  key={i}
+                  id={`alt-chip-${message.id}-${i}`}
+                  onClick={() => onRunAlternative?.(alt.sql, message.dataQueryTableName ?? '')}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-400/40 hover:text-indigo-200 transition-all duration-150 cursor-pointer"
+                  title={alt.sql}
+                >
+                  {alt.label} →
+                </button>
+              ))}
             </div>
           )}
 

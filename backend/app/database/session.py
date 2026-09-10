@@ -65,10 +65,12 @@ def get_db() -> Generator[Session, None, None]:
 def init_db(engine: Engine | None = None) -> None:
     """Initialize system metadata schema, tables, and vector extension."""
     target_engine = engine or get_engine()
-    with target_engine.begin() as connection:
+    with target_engine.connect() as connection:
         try:
             connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            connection.commit()
         except Exception:
             # Fall back gracefully if pgvector extension is not installed in the local environment
-            pass
+            connection.rollback()
         Base.metadata.create_all(connection)
+        connection.commit()

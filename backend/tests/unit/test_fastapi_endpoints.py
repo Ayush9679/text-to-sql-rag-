@@ -51,3 +51,14 @@ def test_conversations_endpoint():
     get_resp = client.get(f"/conversations/{conv['id']}")
     assert get_resp.status_code == 200
     assert get_resp.json()["id"] == conv["id"]
+
+
+def test_dataquery_execute_sql_safety():
+    # Attempt to execute forbidden non-SELECT SQL
+    resp = client.post(
+        "/api/dataquery/execute-sql",
+        json={"sql": "DROP TABLE users;", "table_name": "users"},
+    )
+    assert resp.status_code == 422
+    assert "safety" in resp.json().get("detail", "").lower() or "validation" in resp.json().get("detail", "").lower()
+
